@@ -1,0 +1,17 @@
+name: Grading Tests for COMP-741-841
+
+on:
+  workflow_dispatch:
+    inputs:
+      tests_url:
+        description: 'Public URL for Python unit tests'
+        type: string
+        required: true
+
+jobs:
+  grading-tests-comp-841:
+    name: Grade
+    uses: 2022-fall-comp-741-841/workflow-lab4/.github/workflows/grading_tests.yml@main
+    secrets: inherit
+    with:
+      tests_url: ${{ github.event.inputs.tests_url }}
