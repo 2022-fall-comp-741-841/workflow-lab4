@@ -1,0 +1,163 @@
+name: Lab4 Python Build for COMP-841
+
+on:
+  workflow_call:
+  push:
+
+jobs:
+  python-build-comp-841:
+    name: Lab4 Python Build for COMP-841
+    runs-on: ubuntu-latest
+
+    steps:
+    - id: checkout-repo
+      name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        # Get complete history so we can see the log
+        fetch-depth: 0
+    - id: setup-python
+      name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+        cache: 'pip'
+    - id: install-dependencies
+      name: Install dependencies
+      continue-on-error: true
+      shell: bash
+      run: |
+        # Install dependencies (globally on the GitHub Actions runner)
+        python -m pip install --upgrade pip
+        python -m pip install flake8 pep8-naming flake8-variables-names flake8-docstrings pytest
+        flake8 --version
+        pytest -V
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - id: show-git-log
+      name: Show git commit log
+      shell: bash
+      continue-on-error: true
+      run: |
+        # Show git commit log
+        git log --name-status
+    - id: check-reflection
+      name: Check for reflection document
+      shell: bash
+      continue-on-error: true
+      run: |
+        # Check for design document
+        [ -f "REFLECTION.md" ] && [ -s "REFLECTION.md" ] \
+        && echo "REFLECTION.md file is present." \
+        || exit 1
+    - id: check-requirements
+      name: Check for requirements document
+      shell: bash
+      continue-on-error: true
+      run: |
+        # Check for design document
+        [ -f "REQUIREMENTS.txt" ] && [ -s "REQUIREMENTS.txt" ] \
+        && echo "REQUIREMENTS.txt file is present." \
+        || exit 1
+    - id: check-titanic
+      name: Check for titanic.py document
+      shell: bash
+      continue-on-error: true
+      run: |
+        # Check for design document
+        [ -f "titanic.py" ] && [ -s "titanic.py" ] \
+        && echo "titanic.py file is present." \
+        || exit 1
+    - id: check-readme
+      name: Check for README.md document
+      shell: bash
+      continue-on-error: true
+      run: |
+        # Check for design document
+        [ -f "README.md" ] && [ -s "README.md" ] \
+        && echo "README.md file is present." \
+        || exit 1
+    - id: compile
+      name: Compile all files
+      shell: bash
+      run: |
+        # Compile all files
+        python -m compileall . -l
+    - id: test
+      name: Run unit tests
+      shell: bash
+      continue-on-error: true
+      run: |
+        # Run unit tests
+        if [[ -d "tests" ]];
+          then python -m unittest discover tests;
+          else echo "No tests run.";
+        fi
+    - id: run
+      name: Run all Python code to see output
+      shell: bash
+      continue-on-error: true
+      run: |
+        # Run all Python code to see output
+        for d in */ ; do
+          for file in "$d"/*.py
+            do
+            echo ""
+            echo "Running python file $file:"
+            if python "$file"
+            then
+              continue
+            fi
+            
+          done
+        done
+    - id: lint-code
+      name: Lint Python code
+      continue-on-error: true
+      shell: bash
+      run: |
+        # Lint Python code
+        flake8 . --extend-ignore=D,VNE,N --show-source --count --max-complexity=10 --max-line-length=79
+    - id: lint-pep-8
+      name: Check for PEP-8 naming conventions
+      continue-on-error: true
+      shell: bash
+      run: |
+        # Check PEP-8 naming
+        flake8 . --extend-ignore=D,F,E,W --show-source --count --max-complexity=10 --max-line-length=79
+    - id: lint-docstrings
+      name: Check for PEP-257 docstring conventions
+      continue-on-error: true
+      shell: bash
+      run: |
+        # Check docstrings
+        flake8 . --extend-ignore=D212,VNE,N,F,E,W --show-source --count --max-complexity=10 --max-line-length=79
+    - id: summary-report
+      name: Summary of checks
+      shell: bash
+      run: |
+        # Summary of checks
+        echo "SUMMARY:"
+        echo "${{ steps.check-design.outcome }} -> Design document present"
+        [ -d "tests" ] && echo "${{ steps.test.outcome }} -> Unit tests working"
+        echo "${{ steps.lint-code.outcome }} -> Python code formatted well"
+        echo "${{ steps.lint-pep-8.outcome }} -> PEP-8 naming conventions followed"
+        echo "${{ steps.lint-docstrings.outcome }} -> PEP-257 docstring conventions followed"
+        echo "${{ steps.check-reflection.outcome }} -> reflection is present."
+        echo "${{ steps.check-requirements.outcome }} -> requirements is present." 
+        echo "${{ steps.check-titanic.outcome }} -> titanic.py is present." 
+        echo "${{ steps.check-readme.outcome }} -> readme is present." 
+        #
+        if [[ true \
+            && ${{ steps.check-design.outcome }} == "success" \
+            && ${{ steps.check-reflection.outcome }} == "success" \
+            && ${{ steps.check-requirements.outcome }} == "success" \
+            && ${{ steps.check-titanic.outcome }} == "success" \
+            && ${{ steps.check-readme.outcome }} == "success" \
+            && ${{ steps.test.outcome }} == "success" \
+            && ${{ steps.lint-code.outcome }} == "success" \
+            && ${{ steps.lint-pep-8.outcome }} == "success" \
+            && ${{ steps.lint-docstrings.outcome }} == "success" \
+           ]];
+          then exit 0;
+          else exit 1;
+        fi
